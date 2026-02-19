@@ -23,7 +23,7 @@ class OpenAIClient:
             api_version = os.getenv("OPENAI_API_VERSION", "2024-06-01").strip()
 
             if azure_endpoint:
-                self.client = AzureOpenAI(
+                self.client = openai.AzureOpenAI(
                     azure_endpoint=azure_endpoint,
                     api_key=config.openai_api_key,
                     api_version=api_version,
