@@ -4,20 +4,35 @@ import os
 from .database import get_db
 from .models import AppConfig
 
+
 class OpenAIClient:
     def __init__(self):
         self.client = None
         self._load_config()
-    
+
     def _load_config(self):
-        """Load OpenAI configuration from database"""
         db = next(get_db())
         try:
             config = db.query(AppConfig).first()
-            if config and config.openai_api_key:
-                self.client = openai.OpenAI(api_key=config.openai_api_key)
+            if not (config and config.openai_api_key):
+                self.client = None
+                return
+
+            # If AZURE_OPENAI_ENDPOINT is set, use Azure OpenAI; otherwise use OpenAI.
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
+            api_version = os.getenv("OPENAI_API_VERSION", "2024-06-01").strip()
+
+            if azure_endpoint:
+                self.client = AzureOpenAI(
+                    azure_endpoint=azure_endpoint,
+                    api_key=config.openai_api_key,
+                    api_version=api_version,
+                )
+            else:
+                self.client = OpenAI(api_key=config.openai_api_key)
         finally:
             db.close()
+
     
     def get_models(self) -> List[str]:
         """Get available OpenAI models"""
@@ -30,6 +45,7 @@ class OpenAIClient:
             "gpt-4",
             "gpt-4-turbo",
             "gpt-3.5-turbo"
+            "o3-mini"
         ]
     
     def chat_completion(
